@@ -1,0 +1,661 @@
+# 📘 ContentFarm Professional v1.0
+
+## Software Requirement Specification (SRS)
+
+**Document Version:** 1.0
+**Status:** Approved Draft
+**Project:** ContentFarm Professional
+**Platform:** Windows Desktop
+**Architecture:** Offline First
+**Database:** SQLite
+**Framework:** Python + NiceGUI
+**Target Release:** v1.0
+
+---
+
+# 1. Pendahuluan
+
+## 1.1 Latar Belakang
+
+ContentFarm merupakan software desktop yang dirancang untuk membantu creator, clipper, media, maupun agency dalam mengelola proses upload video pendek ke berbagai platform media sosial secara terstruktur, efisien, dan profesional.
+
+Software ini menghilangkan proses upload manual yang berulang dengan menyediakan sistem manajemen konten berbasis queue, scheduler, dan multi-profile.
+
+---
+
+## 1.2 Tujuan
+
+Membangun aplikasi desktop profesional yang mampu:
+
+* Mengelola banyak akun
+* Menjadwalkan upload
+* Mengelola ribuan video
+* Memantau status upload
+* Mudah dikembangkan
+* Aman terhadap perubahan API platform
+
+---
+
+## 1.3 Target Pengguna
+
+* Content Creator
+* Clipper
+* Digital Agency
+* Media Company
+* Social Media Manager
+
+---
+
+# 2. Ruang Lingkup
+
+Platform yang didukung:
+
+* YouTube Shorts
+* TikTok
+* Instagram Reels
+
+Platform lain akan ditambahkan melalui sistem Provider.
+
+---
+
+# 3. Target Kapasitas
+
+Target awal:
+
+* 6 Profile
+* 18 Account
+* ±54 Upload / hari
+
+Software tetap mampu dikembangkan hingga puluhan profile tanpa mengubah struktur inti.
+
+---
+
+# 4. Prinsip Arsitektur
+
+## Offline First
+
+Semua data disimpan secara lokal.
+
+Tidak membutuhkan server.
+
+---
+
+## Modular
+
+Setiap platform merupakan Provider.
+
+Perubahan TikTok tidak memengaruhi YouTube.
+
+---
+
+## Stable
+
+Tidak ada perubahan struktur database setelah rilis.
+
+---
+
+## Secure
+
+Password tidak pernah disimpan.
+
+Seluruh autentikasi menggunakan OAuth resmi.
+
+---
+
+## Recoverable
+
+Crash aplikasi tidak menghilangkan Queue.
+
+---
+
+## Maintainable
+
+Seluruh modul memiliki tanggung jawab yang jelas.
+
+---
+
+# 5. Workflow Sistem
+
+```text
+CapCut Export
+        │
+        ▼
+Folder Videos
+        │
+        ▼
+Folder Scanner
+        │
+        ▼
+Import upload.xlsx
+        │
+        ▼
+SQLite Database
+        │
+        ▼
+Queue
+        │
+        ▼
+Scheduler
+        │
+        ▼
+Upload Provider
+        │
+        ▼
+History
+```
+
+---
+
+# 6. Struktur Folder
+
+```text
+ContentFarm/
+
+app/
+│
+├── assets/
+├── core/
+├── database/
+├── models/
+├── pages/
+├── providers/
+├── services/
+├── utils/
+├── widgets/
+└── main.py
+
+config/
+data/
+videos/
+logs/
+backup/
+
+requirements.txt
+README.md
+```
+
+---
+
+# 7. Struktur Database
+
+## videos
+
+Master video.
+
+Kolom:
+
+* id
+* filename
+* title
+* caption
+* profile_id
+* schedule_time
+* created_at
+
+---
+
+## upload_jobs
+
+Setiap platform menghasilkan satu Job.
+
+Contoh
+
+Video001
+
+↓
+
+YouTube
+
+Video001
+
+↓
+
+TikTok
+
+Video001
+
+↓
+
+Instagram
+
+Status setiap Job berdiri sendiri.
+
+---
+
+## profiles
+
+Berisi Profile 1–6.
+
+---
+
+## accounts
+
+Menyimpan akun yang telah login OAuth.
+
+---
+
+## scheduler
+
+Daftar jadwal upload.
+
+---
+
+## history
+
+Riwayat upload.
+
+Auto delete setelah 30 hari.
+
+---
+
+## settings
+
+Konfigurasi aplikasi.
+
+---
+
+## logs
+
+Seluruh aktivitas sistem.
+
+---
+
+# 8. Struktur Profile
+
+```text
+Profile 1
+
+YouTube
+TikTok
+Instagram
+
+--------------------
+
+Profile 2
+
+YouTube
+TikTok
+Instagram
+
+--------------------
+
+...
+
+Profile 6
+```
+
+---
+
+# 9. Status Content
+
+Setiap video memiliki status:
+
+* Draft
+* Scheduled
+* Uploading
+* Published
+* Failed
+
+---
+
+# 10. Upload Job
+
+Setiap video menghasilkan tiga Upload Job.
+
+Misalnya:
+
+Video A
+
+↓
+
+YouTube ✔
+
+TikTok Retry
+
+Instagram ✔
+
+Upload platform tidak saling bergantung.
+
+---
+
+# 11. Retry Policy
+
+Retry maksimal:
+
+3 kali
+
+Urutan:
+
+Retry 1
+
+↓
+
+Retry 2
+
+↓
+
+Retry 3
+
+↓
+
+Failed
+
+---
+
+# 12. Scheduler
+
+Menggunakan APScheduler.
+
+Upload dijalankan berdasarkan waktu yang ditentukan.
+
+Tidak menggunakan while loop.
+
+---
+
+# 13. Scanner
+
+Folder videos dipantau secara otomatis menggunakan Watchdog.
+
+Ketika video baru muncul:
+
+* Database diperbarui
+* Status Draft dibuat
+
+Tanpa perlu klik tombol Scan.
+
+---
+
+# 14. Excel
+
+Excel hanya digunakan sebagai:
+
+* Import metadata
+* Export laporan
+
+Excel bukan database.
+
+---
+
+# 15. Logging
+
+Semua aktivitas dicatat.
+
+Contoh:
+
+```text
+17:01
+
+Application Started
+
+17:02
+
+Database Connected
+
+17:03
+
+Video Imported
+
+17:05
+
+Upload Started
+
+17:08
+
+TikTok Success
+```
+
+---
+
+# 16. Backup
+
+Backup database dilakukan otomatis.
+
+Lokasi:
+
+```text
+backup/
+```
+
+Backup dapat dipulihkan melalui menu Settings.
+
+---
+
+# 17. Konfigurasi
+
+Menggunakan:
+
+```text
+config/config.json
+```
+
+Contoh:
+
+```json
+{
+  "theme": "dark",
+  "retry": 3,
+  "history_days": 30,
+  "video_folder": "D:/Videos",
+  "excel_folder": "D:/ContentFarm/data"
+}
+```
+
+---
+
+# 18. UI Structure
+
+## Dashboard
+
+Menampilkan:
+
+* Upload hari ini
+* Queue
+* Success
+* Retry
+* Failed
+* Remaining
+* Last Upload
+
+---
+
+## Content
+
+Berisi seluruh video.
+
+Filter:
+
+* Draft
+* Scheduled
+* Uploading
+* Published
+* Failed
+
+---
+
+## Profiles
+
+Kelola Profile.
+
+---
+
+## Accounts
+
+Login OAuth.
+
+Status:
+
+* Connected
+* Expired
+* Disconnected
+
+---
+
+## History
+
+Riwayat upload.
+
+---
+
+## Settings
+
+Pengaturan aplikasi.
+
+---
+
+# 19. Provider System
+
+```text
+providers/
+
+youtube/
+    provider.py
+    oauth.py
+    upload.py
+    compatibility.py
+
+tiktok/
+    provider.py
+    oauth.py
+    upload.py
+    compatibility.py
+
+instagram/
+    provider.py
+    oauth.py
+    upload.py
+    compatibility.py
+```
+
+Setiap provider dapat diperbarui tanpa mengubah modul lain.
+
+---
+
+# 20. Authentication
+
+Menggunakan OAuth resmi dari masing-masing platform.
+
+Password pengguna tidak disimpan.
+
+Token disimpan secara aman untuk digunakan kembali hingga kedaluwarsa.
+
+---
+
+# 21. Error Handling
+
+Aplikasi tidak menampilkan traceback Python kepada pengguna.
+
+Contoh:
+
+❌ Salah
+
+```text
+Traceback...
+sqlite3.Error...
+```
+
+✅ Benar
+
+```text
+Database tidak dapat dibuka.
+
+Silakan restore backup atau hubungi administrator.
+```
+
+---
+
+# 22. Keamanan
+
+* Tidak menyimpan password.
+* Menggunakan OAuth resmi.
+* Validasi file sebelum diproses.
+* Log tidak menyimpan informasi sensitif.
+* Konfigurasi dipisahkan dari kode sumber.
+
+---
+
+# 23. Distribusi
+
+Output akhir:
+
+```text
+ContentFarm Professional.exe
+```
+
+Installer mencakup:
+
+* SQLite
+* Dependensi Python
+* Konfigurasi awal
+* Struktur folder
+
+Pengguna cukup menginstal dan menjalankan aplikasi.
+
+---
+
+# 24. Roadmap Implementasi
+
+## Milestone 1 – Core Framework
+
+* Struktur proyek
+* Database
+* Sidebar
+* Dashboard
+* Theme
+* Logger
+* Config
+* Settings
+
+## Milestone 2 – Content Engine
+
+* Scanner
+* Import Excel
+* Queue
+* Scheduler
+* Retry
+* History
+
+## Milestone 3 – Account & Provider Engine
+
+* Profile Manager
+* Account Manager
+* OAuth Engine
+* Provider Framework
+
+## Milestone 4 – Platform Integration
+
+* YouTube Provider
+* TikTok Provider
+* Instagram Provider
+
+---
+
+# 25. Definisi Selesai (Definition of Done)
+
+ContentFarm Professional v1.0 dinyatakan selesai apabila memenuhi seluruh kriteria berikut:
+
+* ✅ UI desktop profesional dan responsif.
+* ✅ Struktur proyek modular dan terdokumentasi.
+* ✅ Database SQLite stabil dengan migrasi otomatis.
+* ✅ Sistem Content Management (Draft, Scheduled, Uploading, Published, Failed) berjalan penuh.
+* ✅ Scheduler mampu menjalankan upload sesuai jadwal.
+* ✅ Multi-profile dan multi-account berfungsi.
+* ✅ Provider YouTube, TikTok, dan Instagram menggunakan autentikasi resmi (OAuth) serta dapat diperbarui secara independen.
+* ✅ Retry, logging, dan backup bekerja tanpa kehilangan data.
+* ✅ Aplikasi dapat dibangun menjadi installer Windows (`ContentFarm Professional.exe`).
+* ✅ Dokumentasi pengguna dan dokumentasi teknis tersedia.
+
+---
+
+## 📌 Catatan Arsitek
+
+Ada **dua rekomendasi** yang saya ingin tambahkan agar ContentFarm benar-benar terasa seperti produk komersial, bukan sekadar aplikasi internal:
+
+### 1. Plugin System
+
+Provider tidak dikompilasi langsung ke aplikasi, tetapi dimuat sebagai plugin. Dengan begitu, ketika TikTok mengubah API, kita cukup mengganti plugin TikTok tanpa merilis ulang seluruh aplikasi.
+
+### 2. Database Versioning
+
+Tambahkan sistem migrasi database (misalnya versi `v1`, `v2`, `v3`) sehingga ketika nanti ada penambahan kolom atau tabel, aplikasi dapat memperbarui struktur database secara otomatis tanpa menghapus data pengguna.
+
+Menurut saya, dua hal ini akan sangat meningkatkan umur proyek dan mengurangi biaya pemeliharaan di masa depan.
